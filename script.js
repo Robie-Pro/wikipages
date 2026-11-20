@@ -72,11 +72,12 @@ async function searchWiki() {
     }
 }
 
+
 function htmlToText(html) {
     const doc = new DOMParser().parseFromString(html, "text/html");
 
     doc.querySelectorAll(
-        "script, style, sup.reference, .mw-editsection, .reference"
+        "script, style, sup, .reference, .mw-editsection, .references, .reflist, .refbegin, .mw-references-wrap, .navbox, .authority-control, .catlinks, .metadata, .noprint"
     ).forEach(el => el.remove());
 
     doc.querySelectorAll("br").forEach(el => {
@@ -87,8 +88,15 @@ function htmlToText(html) {
         el.append("\n");
     });
 
-    return doc.body.textContent.replace(/\n{3,}/g, "\n\n").trim();
+    let text = doc.body.textContent;
+
+    text = text.replace(/Cite error:.*?(?=\n|$)/gi, "");
+    text = text.replace(/\[\s*\d+\s*\]/g, "");
+    text = text.replace(/\n{3,}/g, "\n\n");
+
+    return text.trim();
 }
+
 
 async function loadArticle(pageId) {
     results.style.display = "none";
