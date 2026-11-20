@@ -107,6 +107,26 @@ function cleanArticleHTML(html) {
         if (!el.textContent.trim()) el.remove();
     });
 
+    // Remove Wikipedia opening notices
+    doc.querySelectorAll("p").forEach(p => {
+        if (
+            /redirects here/i.test(p.textContent) ||
+            /for other uses, see/i.test(p.textContent) ||
+            /for the physical ball used in the sport/i.test(p.textContent)
+        ) {
+            p.remove();
+        }
+    });
+
+    // Remove infoboxes and article metadata
+    doc.querySelectorAll(`
+        .infobox,
+        .hatnote,
+        .shortdescription,
+        .metadata,
+        .sidebar
+    `).forEach(el => el.remove());
+
     // Remove links but preserve their text
     doc.querySelectorAll("a").forEach(link => {
         link.replaceWith(...link.childNodes);
