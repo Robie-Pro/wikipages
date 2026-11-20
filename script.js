@@ -70,27 +70,49 @@ async function searchWiki() {
     }
 }
 
+
 function cleanArticleHTML(html) {
     const doc = new DOMParser().parseFromString(html, "text/html");
 
     doc.querySelectorAll(`
-        script, style, sup.reference,
-        .mw-editsection, .reference,
-        .references, .reflist,
-        .mw-references-wrap, .navbox,
-        .vertical-navbox, .metadata,
-        .authority-control, .catlinks,
-        .noprint, .shortdescription,
-        .sistersitebox, .portalbox,
-        .hatnote, .ambox, .ombox,
-        .tmbox, .fmbox, .messagebox
+        script, style, sup, .reference,
+        .mw-editsection, .references,
+        .reflist, .mw-references-wrap,
+        .navbox, .vertical-navbox,
+        .metadata, .authority-control,
+        .catlinks, .noprint,
+        .shortdescription, .sistersitebox,
+        .portalbox, .hatnote,
+        .ambox, .ombox, .tmbox, .fmbox,
+        .infobox, .sidebar, .toc,
+        figure, .thumb, .gallery,
+        .mw-empty-elt
     `).forEach(el => el.remove());
 
-    doc.querySelectorAll("a").forEach(link => {
-        link.removeAttribute("href");
-        link.removeAttribute("class");
+    // Remove redirect and disambiguation notices
+    doc.querySelectorAll("p").forEach(p => {
+        const text = p.textContent.trim();
+
+        if (
+            /redirects here/i.test(text) ||
+            /for other uses, see/i.test(text) ||
+            /may refer to:/i.test(text)
+        ) {
+            p.remove();
+        }
     });
 
+    // Remove empty headings and paragraphs
+    doc.querySelectorAll("p, h2, h3, h4").forEach(el => {
+        if (!el.textContent.trim()) el.remove();
+    });
+
+    // Remove links but preserve their text
+    doc.querySelectorAll("a").forEach(link => {
+        link.replaceWith(...link.childNodes);
+    });
+
+    // Remove unwanted formatting
     doc.querySelectorAll("*").forEach(el => {
         el.removeAttribute("style");
         el.removeAttribute("class");
@@ -99,6 +121,7 @@ function cleanArticleHTML(html) {
 
     return doc.body.innerHTML;
 }
+
 
 async function loadArticle(pageId) {
     results.style.display = "none";
