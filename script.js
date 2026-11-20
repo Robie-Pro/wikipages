@@ -1,4 +1,5 @@
 
+
 const API = "https://en.wikipedia.org/w/api.php";
 
 const searchInput = document.getElementById("search");
@@ -19,15 +20,12 @@ async function api(params) {
     });
 
     const response = await fetch(url);
-
     if (!response.ok) throw new Error("Request failed");
-
     return response.json();
 }
 
 async function searchWiki() {
     const query = searchInput.value.trim();
-
     if (!query) return;
 
     reader.style.display = "none";
@@ -67,36 +65,40 @@ async function searchWiki() {
             results.appendChild(div);
         });
 
-    } catch (error) {
+    } catch {
         statusText.textContent = "Unable to connect to Wikipedia.";
     }
 }
 
-
-function htmlToText(html) {
+function cleanArticleHTML(html) {
     const doc = new DOMParser().parseFromString(html, "text/html");
 
-    doc.querySelectorAll(
-        "script, style, sup, .reference, .mw-editsection, .references, .reflist, .refbegin, .mw-references-wrap, .navbox, .authority-control, .catlinks, .metadata, .noprint"
-    ).forEach(el => el.remove());
+    doc.querySelectorAll(`
+        script, style, sup.reference,
+        .mw-editsection, .reference,
+        .references, .reflist,
+        .mw-references-wrap, .navbox,
+        .vertical-navbox, .metadata,
+        .authority-control, .catlinks,
+        .noprint, .shortdescription,
+        .sistersitebox, .portalbox,
+        .hatnote, .ambox, .ombox,
+        .tmbox, .fmbox, .messagebox
+    `).forEach(el => el.remove());
 
-    doc.querySelectorAll("br").forEach(el => {
-        el.replaceWith("\n");
+    doc.querySelectorAll("a").forEach(link => {
+        link.removeAttribute("href");
+        link.removeAttribute("class");
     });
 
-    doc.querySelectorAll("p, li, h2, h3, h4").forEach(el => {
-        el.append("\n");
+    doc.querySelectorAll("*").forEach(el => {
+        el.removeAttribute("style");
+        el.removeAttribute("class");
+        el.removeAttribute("id");
     });
 
-    let text = doc.body.textContent;
-
-    text = text.replace(/Cite error:.*?(?=\n|$)/gi, "");
-    text = text.replace(/\[\s*\d+\s*\]/g, "");
-    text = text.replace(/\n{3,}/g, "\n\n");
-
-    return text.trim();
+    return doc.body.innerHTML;
 }
-
 
 async function loadArticle(pageId) {
     results.style.display = "none";
@@ -104,10 +106,11 @@ async function loadArticle(pageId) {
     backButton.style.display = "inline-block";
 
     statusText.textContent = "Loading article...";
-    document.getElementById("title").textContent = "";
-    document.getElementById("introduction").textContent = "";
     navigation.innerHTML = "";
     sectionsContainer.innerHTML = "";
+    document.getElementById("title").textContent = "";
+
+    if (currentObserver) currentObserver.disconnect();
 
     try {
         const data = await api({
@@ -116,23 +119,9 @@ async function loadArticle(pageId) {
             prop: "sections"
         });
 
-        const sections = data.parse.sections;
-
-        const intro = await api({
-            action: "parse",
-            pageid: pageId,
-            prop: "text",
-            section: "0"
-        });
-
         document.getElementById("title").textContent = data.parse.title;
 
-        document.getElementById("introduction").textContent =
-            htmlToText(intro.parse.text["*"]) || "No introduction available.";
-
-        for (const section of sections) {
-            if (section.index === "0") continue;
-
+        for (const section of data.parse.sections) {
             const sectionData = await api({
                 action: "parse",
                 pageid: pageId,
@@ -140,25 +129,31 @@ async function loadArticle(pageId) {
                 section: section.index
             });
 
-            const text = htmlToText(sectionData.parse.text["*"]);
+            const html = cleanArticleHTML(
+                sectionData.parse.text["*"]
+            );
 
-            if (!text) continue;
+            if (!html.trim()) continue;
 
-            displaySection(section, text);
+            if (section.index === "0") {
+                document.getElementById("introduction").innerHTML = html;
+                continue;
+            }
+
+            displaySection(section, html);
         }
 
         setupObserver();
-
         statusText.textContent = "";
 
         window.scrollTo({ top: 0, behavior: "smooth" });
 
     } catch (error) {
-        statusText.textContent = "Unable to load the full article.";
+        statusText.textContent = "Unable to load article.";
     }
 }
 
-function displaySection(section, text) {
+function displaySection(section, html) {
     const id = "section-" + section.index;
 
     const link = document.createElement("a");
@@ -167,7 +162,6 @@ function displaySection(section, text) {
 
     link.onclick = event => {
         event.preventDefault();
-
         document.getElementById(id).scrollIntoView({
             behavior: "smooth"
         });
@@ -184,7 +178,7 @@ function displaySection(section, text) {
 
     const content = document.createElement("div");
     content.className = "section-text";
-    content.textContent = text;
+    content.innerHTML = html;
 
     sectionElement.append(heading, content);
     sectionsContainer.appendChild(sectionElement);
