@@ -1,0 +1,48 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>WikiPages</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+    <div class="header">
+        <div class="logo">WikiPages</div>
+        <div class="search">
+            <input id="search" placeholder="Search Wikipedia...">
+            <button id="searchButton">Search</button>
+        </div>
+    </div>
+</header>
+
+<main>
+    <button class="back" id="back">← Back to results</button>
+
+    <div id="status">Search for something to start reading.</div>
+    <div id="results"></div>
+
+    <div class="reader" id="reader">
+        <h1 class="article-title" id="title"></h1>
+        <div class="article-description">Wikipedia article</div>
+
+        <div class="reader-layout">
+            <nav class="navigation">
+                <h3>Contents</h3>
+                <div id="navigation"></div>
+            </nav>
+
+            <div class="content">
+                <div class="introduction" id="introduction"></div>
+                <div id="sections"></div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script src="script.js"></script>
+</body>
+</html>
